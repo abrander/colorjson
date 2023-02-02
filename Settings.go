@@ -19,3 +19,14 @@ var Default = Settings{
 	Separator:      " ",
 	Color:          DefaultColors,
 }
+
+// Jq contains the settings used to colorize and
+// format the JSON document to look like the output
+// from jq.
+var Jq = Settings{
+	EndWithNewline: true,
+	Newlines:       true,
+	Indent:         "  ",
+	Separator:      " ",
+	Color:          JqColors,
+}
