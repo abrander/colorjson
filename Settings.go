@@ -4,6 +4,9 @@ package colorjson
 // format the JSON document.
 type Settings struct {
 	EndWithNewline bool
+	Newlines       bool
+	Indent         string
+	Separator      string
 	Color          ColorSettings
 }
 
@@ -11,5 +14,8 @@ type Settings struct {
 // and format the JSON document.
 var Default = Settings{
 	EndWithNewline: true,
+	Newlines:       true,
+	Indent:         "  ",
+	Separator:      " ",
 	Color:          DefaultColors,
 }

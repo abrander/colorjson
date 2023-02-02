@@ -44,6 +44,10 @@ func (s *state) replace(newState int) {
 	s.current = newState
 }
 
+func (s *state) depth() int {
+	return len(s.prev)
+}
+
 func (s *state) String() string {
 	str := ""
 

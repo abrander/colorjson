@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"unicode"
 )
 
@@ -16,6 +17,8 @@ type Encoder struct {
 
 	currentColor Color
 	state        state
+	newline1     bool
+	newline2     bool
 }
 
 // NewEncoder returns a new encoder that writes to w.
@@ -73,6 +76,21 @@ func (e *Encoder) Colorize(r io.Reader) error {
 
 	color := Reset
 
+	printConditionalNewline := func(needed *bool) {
+		if !*needed {
+			return
+		}
+
+		_, _ = e.w.Write([]byte("\n"))
+		if e.s.Indent != "" {
+			for i := 0; i < e.state.depth(); i++ {
+				_, _ = e.w.Write([]byte(e.s.Indent))
+			}
+		}
+
+		*needed = false
+	}
+
 	printRune := func(r rune) {
 		if err != nil {
 			return
@@ -84,7 +102,9 @@ func (e *Encoder) Colorize(r io.Reader) error {
 			_, _ = e.w.Write([]byte(color.String()))
 		}
 
+		printConditionalNewline(&e.newline1)
 		_, err = e.w.Write([]byte(string(r)))
+		printConditionalNewline(&e.newline2)
 	}
 
 	readThing := func(r rune) {
@@ -95,10 +115,12 @@ func (e *Encoder) Colorize(r io.Reader) error {
 		switch r {
 		case '{':
 			color = Reset
+			e.newline2 = true
 			e.state.push(object)
 
 		case '[':
 			color = Reset
+			e.newline2 = true
 			e.state.push(array)
 
 		case '"':
@@ -178,17 +200,19 @@ READLOOP:
 			}
 
 			if r == '}' {
-				e.state.pop()
 				color = Reset
+				e.newline1 = true
+				e.state.pop()
 			}
 
 			if r == ',' {
 				color = Reset
+				e.newline2 = true
 			}
 
 			if r == '"' {
-				e.state.push(identifier)
 				color = e.s.Color.Ident
+				e.state.push(identifier)
 
 				printRune(r)
 				readString(postIdentifier)
@@ -202,9 +226,10 @@ READLOOP:
 			r := skipSpace()
 			switch r {
 			case ']':
+				color = Reset
+				e.newline1 = true
 				e.state.pop()
 
-				color = Reset
 				printRune(r)
 
 			case ',':
@@ -232,6 +257,8 @@ READLOOP:
 			printRune(r)
 
 		case preValue:
+			_, err = e.w.Write([]byte(e.s.Separator))
+
 			e.state.pop()
 			readThing(skipSpace())
 
@@ -244,20 +271,31 @@ READLOOP:
 				break READLOOP
 			}
 
-			if !unicode.IsDigit(r) && r != '.' && r != 'e' && r != 'E' && r != '+' && r != '-' {
-				color = Reset
-
-				e.state.pop()
-			}
-
-			if r == ']' || r == '}' {
-				color = Reset
-
-				e.state.pop()
-			}
-
-			if !unicode.IsSpace(r) {
+			switch r {
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '+', '.', 'e', 'E':
 				printRune(r)
+
+			case ',':
+				color = Reset
+				e.newline2 = true
+				e.state.pop()
+
+				printRune(r)
+
+			case ']', '}':
+				color = Reset
+				e.newline1 = true
+				e.state.pop() // exit numberValue state
+				e.state.pop() // exit array or object state
+
+				printRune(r)
+
+			default:
+				color = Red | Bold
+
+				if !unicode.IsSpace(r) {
+					printRune(r)
+				}
 			}
 
 		case nullValue, boolValue:
@@ -266,10 +304,23 @@ READLOOP:
 				break READLOOP
 			}
 
-			if r == ',' || r == '}' || r == ']' || unicode.IsSpace(r) {
-				color = Reset
+			if strings.ContainsRune("null"+"true"+"false", r) {
+				printRune(r)
 
+				break
+			}
+
+			if r == ',' {
+				color = Reset
+				e.newline2 = true
 				e.state.pop()
+			}
+
+			if r == '}' || r == ']' {
+				color = Reset
+				e.newline1 = true
+				e.state.pop() // end the value
+				e.state.pop() // end the surrounding object/array
 			}
 
 			if !unicode.IsSpace(r) {
