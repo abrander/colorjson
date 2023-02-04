@@ -7,6 +7,7 @@ type Settings struct {
 	Newlines       bool
 	Indent         string
 	Separator      string
+	ColorMode      ColorMode
 	Color          ColorSettings
 }
 

@@ -15,6 +15,7 @@ type Encoder struct {
 	w io.Writer
 	s Settings
 
+	useColors    bool
 	currentColor Color
 	state        state
 	newline1     bool
@@ -24,8 +25,9 @@ type Encoder struct {
 // NewEncoder returns a new encoder that writes to w.
 func NewEncoder(w io.Writer, s Settings) *Encoder {
 	return &Encoder{
-		w: w,
-		s: s,
+		w:         w,
+		s:         s,
+		useColors: s.ColorMode.UseColors(w),
 	}
 }
 
@@ -96,7 +98,7 @@ func (e *Encoder) Colorize(r io.Reader) error {
 			return
 		}
 
-		if color != e.currentColor {
+		if e.useColors && color != e.currentColor {
 			e.currentColor = color
 
 			_, _ = e.w.Write([]byte(color.String()))
