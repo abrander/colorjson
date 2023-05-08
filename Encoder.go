@@ -109,45 +109,46 @@ func (e *Encoder) Colorize(r io.Reader) error {
 		printConditionalNewline(&e.newline2)
 	}
 
+	stateColor := func(r rune) (int, Color, error) {
+		switch r {
+		case '{':
+			return objectStart, Reset, nil
+
+		case '[':
+			return arrayStart, Reset, nil
+
+		case '"':
+			return stringValue, e.s.Color.String, nil
+
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '+':
+			return numberValue, e.s.Color.Number, nil
+
+		case 't':
+			return boolValue, e.s.Color.True, nil
+
+		case 'f':
+			return boolValue, e.s.Color.False, nil
+
+		case 'n':
+			return nullValue, e.s.Color.Null, nil
+
+		default:
+			return start, Reset, fmt.Errorf("Unexpected character: %c", r)
+		}
+	}
+
 	readThing := func(r rune) {
 		if r < 0 {
 			return
 		}
 
-		switch r {
-		case '{':
-			color = Reset
-			e.newline2 = true
-			e.state.push(object)
-
-		case '[':
-			color = Reset
-			e.newline2 = true
-			e.state.push(array)
-
-		case '"':
-			color = e.s.Color.String
-			e.state.push(stringValue)
-
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '+':
-			color = e.s.Color.Number
-			e.state.push(numberValue)
-
-		case 't':
-			color = e.s.Color.True
-			e.state.push(boolValue)
-
-		case 'f':
-			color = e.s.Color.False
-			e.state.push(boolValue)
-
-		case 'n':
-			color = e.s.Color.Null
-			e.state.push(nullValue)
-
-		default:
-			err = fmt.Errorf("Unexpected character: %c", r)
+		s, c, e2 := stateColor(r)
+		if e2 != nil {
+			err = e2
 		}
+
+		color = c
+		e.state.push(s)
 
 		printRune(r)
 	}
@@ -191,11 +192,12 @@ func (e *Encoder) Colorize(r io.Reader) error {
 
 READLOOP:
 	for err == nil {
-		switch e.state.state() {
+		state := e.state.state()
+		switch state {
 		case start:
 			readThing(skipSpace())
 
-		case object:
+		case objectStart, object:
 			r := skipSpace()
 			if r < 0 {
 				break READLOOP
@@ -203,7 +205,9 @@ READLOOP:
 
 			if r == '}' {
 				color = Reset
-				e.newline1 = true
+				if state != objectStart {
+					e.newline1 = true
+				}
 				e.state.pop()
 			}
 
@@ -214,9 +218,15 @@ READLOOP:
 
 			if r == '"' {
 				color = e.s.Color.Ident
-				e.state.push(identifier)
+
+				if state == objectStart {
+					e.newline1 = true
+					e.state.replace(object)
+				}
 
 				printRune(r)
+				e.state.push(identifier)
+
 				readString(postIdentifier)
 
 				break
@@ -224,25 +234,37 @@ READLOOP:
 
 			printRune(r)
 
-		case array:
+		case arrayStart, array:
 			r := skipSpace()
 			switch r {
 			case ']':
 				color = Reset
-				e.newline1 = true
+				if state != arrayStart {
+					e.newline1 = true
+				}
 				e.state.pop()
 
 				printRune(r)
 
 			case ',':
 				color = Reset
+				e.newline2 = true
 				printRune(r)
 
 			case ERROR:
 				break READLOOP
 
 			default:
-				readThing(r)
+				color = e.s.Color.Ident
+				if state == arrayStart {
+					e.newline1 = true
+					e.state.replace(array)
+				}
+
+				s, c, _ := stateColor(r)
+				color = c
+				printRune(r)
+				e.state.push(s)
 			}
 
 		case postIdentifier:

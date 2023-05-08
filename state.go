@@ -11,7 +11,9 @@ type state struct {
 
 const (
 	start = iota
+	objectStart
 	object
+	arrayStart
 	array
 	identifier
 	postIdentifier
@@ -54,8 +56,12 @@ func (s *state) String() string {
 	switch s.current {
 	case start:
 		str += "START"
+	case objectStart:
+		str += "OBJECTSTART"
 	case object:
 		str += "OBJECT"
+	case arrayStart:
+		str += "ARRAYSTART"
 	case array:
 		str += "ARRAY"
 	case identifier:
