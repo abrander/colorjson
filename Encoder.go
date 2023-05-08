@@ -331,8 +331,12 @@ READLOOP:
 		}
 	}
 
-	if err == io.EOF && e.s.EndWithNewline {
-		_, err = e.w.Write([]byte{'\n'})
+	if err == io.EOF {
+		err = nil
+
+		if e.s.EndWithNewline {
+			_, err = e.w.Write([]byte{'\n'})
+		}
 	}
 
 	return err
