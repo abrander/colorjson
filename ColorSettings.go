@@ -12,7 +12,7 @@ type ColorSettings struct {
 }
 
 // JqColors is the color scheme used by jq.
-var JqColors = ColorSettings{
+var JqColors = &ColorSettings{
 	Ident:  Blue | Bold,
 	String: Green,
 	Number: Reset,
@@ -22,7 +22,7 @@ var JqColors = ColorSettings{
 }
 
 // DefaultColors is the default color scheme.
-var DefaultColors = ColorSettings{
+var DefaultColors = &ColorSettings{
 	Ident:  Cyan | Bold,
 	String: Green,
 	Number: Yellow,

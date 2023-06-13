@@ -6,8 +6,9 @@ import (
 
 // https://seriot.ch/projects/parsing_json.html
 
-// ColorizeData colorizes the given data and returns the result.
-func ColorizeData(data []byte, s Settings) ([]byte, error) {
+// ColorizeData colorizes the given data and returns the result. If s
+// is nil, the default settings are used.
+func ColorizeData(data []byte, s *Settings) ([]byte, error) {
 	var buf bytes.Buffer
 
 	e := NewEncoder(&buf, s)
@@ -21,7 +22,7 @@ func ColorizeData(data []byte, s Settings) ([]byte, error) {
 
 // Marshal returns the colored JSON encoding of v. If s is nil, the
 // default settings are used.
-func Marshal(v any, s Settings) ([]byte, error) {
+func Marshal(v any, s *Settings) ([]byte, error) {
 	var buf bytes.Buffer
 
 	err := NewEncoder(&buf, s).Encode(v)

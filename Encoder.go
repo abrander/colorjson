@@ -13,7 +13,8 @@ import (
 // Encoder is a JSON encoder that colorizes the output.
 type Encoder struct {
 	w io.Writer
-	s Settings
+	s *Settings
+	c *ColorSettings
 
 	useColors    bool
 	currentColor Color
@@ -22,11 +23,24 @@ type Encoder struct {
 	newline2     bool
 }
 
-// NewEncoder returns a new encoder that writes to w.
-func NewEncoder(w io.Writer, s Settings) *Encoder {
+// NewEncoder returns a new encoder that writes to w. If settings
+// is nil, the default settings are used.
+func NewEncoder(w io.Writer, settings *Settings) *Encoder {
+	s := Default
+	c := DefaultColors
+
+	if settings != nil {
+		s = settings
+
+		if settings.Color != nil {
+			c = settings.Color
+		}
+	}
+
 	return &Encoder{
 		w:         w,
 		s:         s,
+		c:         c,
 		useColors: s.ColorMode.UseColors(w),
 	}
 }
@@ -118,19 +132,19 @@ func (e *Encoder) Colorize(r io.Reader) error {
 			return arrayStart, Reset, nil
 
 		case '"':
-			return stringValue, e.s.Color.String, nil
+			return stringValue, e.c.String, nil
 
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '+':
-			return numberValue, e.s.Color.Number, nil
+			return numberValue, e.c.Number, nil
 
 		case 't':
-			return boolValue, e.s.Color.True, nil
+			return boolValue, e.c.True, nil
 
 		case 'f':
-			return boolValue, e.s.Color.False, nil
+			return boolValue, e.c.False, nil
 
 		case 'n':
-			return nullValue, e.s.Color.Null, nil
+			return nullValue, e.c.Null, nil
 
 		default:
 			return start, Reset, fmt.Errorf("Unexpected character: %c", r)
@@ -217,7 +231,7 @@ READLOOP:
 			}
 
 			if r == '"' {
-				color = e.s.Color.Ident
+				color = e.c.Ident
 
 				if state == objectStart {
 					e.newline1 = true
@@ -255,7 +269,7 @@ READLOOP:
 				break READLOOP
 
 			default:
-				color = e.s.Color.Ident
+				color = e.c.Ident
 				if state == arrayStart {
 					e.newline1 = true
 					e.state.replace(array)

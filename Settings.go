@@ -8,23 +8,23 @@ type Settings struct {
 	Indent         string
 	Separator      string
 	ColorMode      ColorMode
-	Color          ColorSettings
+	Color          *ColorSettings
 }
 
 // Default contains the default settings used to colorize
 // and format the JSON document.
-var Default = Settings{
+var Default = &Settings{
 	EndWithNewline: true,
 	Newlines:       true,
 	Indent:         "  ",
 	Separator:      " ",
-	Color:          DefaultColors,
+	Color:          nil,
 }
 
 // Jq contains the settings used to colorize and
 // format the JSON document to look like the output
 // from jq.
-var Jq = Settings{
+var Jq = &Settings{
 	EndWithNewline: true,
 	Newlines:       true,
 	Indent:         "  ",
