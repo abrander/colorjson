@@ -93,6 +93,10 @@ func (e *Encoder) Colorize(r io.Reader) error {
 	color := Reset
 
 	printConditionalNewline := func(needed *bool) {
+		if !e.s.Newlines {
+			return
+		}
+
 		if !*needed {
 			return
 		}
